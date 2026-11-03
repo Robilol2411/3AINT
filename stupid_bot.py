@@ -1,5 +1,3 @@
-"""Bot qui joue au hasard pour Manic Minelayers."""
-
 import random
 
 from manic_minelayers import ManicMinelayers

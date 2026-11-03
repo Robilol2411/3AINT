@@ -17,12 +17,7 @@ class MinMax:
         self.__heuristique = heuristique
 
     def choisir_coup(self) -> tuple[int, int]:
-        """Cherche le meilleur coup avec l'alpha-bêta, sans le jouer.
-
-        Paramètres : aucun.
-
-        Retour : le coup choisi sous la forme (ligne, colonne).
-        """
+        
         meilleurs_coups = []
         meilleur_score = float("-inf")
 
@@ -42,12 +37,7 @@ class MinMax:
         return random.choice(meilleurs_coups)
 
     def get_nom(self) -> str:
-        """Donne le nom du joueur.
-
-        Paramètres : aucun.
-
-        Retour : le nom, par exemple "MinMax h1 p4".
-        """
+       
         return f"MinMax h{self.__heuristique} p{self.__profondeur}"
 
     def __alphabeta(self, profondeur: int, alpha: float, beta: float,
