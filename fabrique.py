@@ -8,8 +8,7 @@ NOMS = ["humain", "stupid", "glouton", "minmax", "mcts"]
 
 
 def creer_joueur(nom, jeu, numero, interface=None, **parametres):
-    # crée le joueur de ce nom ; les parametres sont ceux de sa classe
-    # (ex. profondeur=4, heuristique=2 pour minmax, iterations=500 pour mcts)
+    # crée le joueur et les parametres sont ceux de sa classe
     if nom == "humain":
         return Human(jeu, numero, interface)
     if nom == "stupid":

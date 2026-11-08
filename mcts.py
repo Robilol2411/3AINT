@@ -7,7 +7,7 @@ from sommet import Sommet
 class MCTS:
     # Recherche arborescente de Monte-Carlo.
     # exploration = température C de UCB1, iterations = nombre de tours de recherche.
-    # politique : "aleatoire" ou "glouton" (bonus) pour les simulations.
+    # politique : "aleatoire" ou "glouton" pour les simulations.
 
     def __init__(self, jeu, numero, exploration=1.4, iterations=1000,
                  politique="aleatoire"):

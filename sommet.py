@@ -58,13 +58,13 @@ class Sommet:
         return len(self.__a_essayer) == 0
 
     def descendre(self, exploration):
-        # sélection (récursive) : on descend jusqu'à un sommet à développer
+        # sélection (récursive) on descend jusqu'à un sommet à développer
         if self.est_terminal() or not self.est_plein():
             return self
         return self.__meilleur_enfant(exploration).descendre(exploration)
 
     def etendre(self):
-        # expansion : crée l'enfant d'un coup pas encore essayé
+        # expansion crée l'enfant d'un coup pas encore essayé
         coup = self.__a_essayer.pop()
         enfant = Sommet(self.__jeu, coup, self)
         self.__enfants.append(enfant)

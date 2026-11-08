@@ -3,7 +3,7 @@ from constantes import M_DEFAUT, MARQUE, N_DEFAUT, SAUTS, VIDE
 
 class ManicMinelayers:
     # Le moteur du jeu. Le plateau est une liste de lignes (listes de cases).
-    # Tout est privé : on ne peut utiliser que les méthodes ci-dessous.
+    # Tout est privé on ne peut utiliser que les méthodes ci-dessous.
 
     def __init__(self, lignes=M_DEFAUT, colonnes=N_DEFAUT):
         self.__lignes = lignes

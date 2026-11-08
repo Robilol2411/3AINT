@@ -6,7 +6,7 @@ MARQUE = -1
 M_DEFAUT = 5
 N_DEFAUT = 10
 
-# Sauts du cavalier, exprimés en (delta_ligne, delta_colonne)
+# Sauts du cavalier (delta_ligne, delta_colonne)
 SAUTS = (
     (-2, -1), (-2, 1), (-1, -2), (-1, 2),
     (1, -2), (1, 2), (2, -1), (2, 1),
