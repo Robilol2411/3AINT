@@ -2,7 +2,7 @@ from constantes import DELAI_COUP_MS, MARQUE, VIDE
 
 
 class Partie:
-    # Fait jouer deux joueurs à tour de rôle, avec ou sans fenêtre.
+    # Fait jouer deux joueurs à tour de rôle avec ou sans fenêtre.
 
     def __init__(self, jeu, joueur1, joueur2, interface=None, verbeux=False):
         self.__jeu = jeu

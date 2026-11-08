@@ -1,5 +1,5 @@
 class Human:
-    # Joueur humain : le coup est choisi par un clic sur une case surlignée.
+    # Joueur humain le coup est choisi par un clic sur une case surlignée.
 
     def __init__(self, jeu, numero, interface):
         self.__jeu = jeu

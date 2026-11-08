@@ -2,7 +2,7 @@ import random
 
 
 class StupidBot:
-    # Joue un coup licite tiré au hasard.
+    # Joue un coup legal au hasard.
 
     def __init__(self, jeu, numero):
         self.__jeu = jeu

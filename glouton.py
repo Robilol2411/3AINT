@@ -4,9 +4,8 @@ from constantes import GAIN, NUL, PERTE
 
 
 class Glouton:
-    # Tactique gloutonne : pour chaque coup possible, on le joue, on note la
-    # position obtenue, puis on l'annule. Aucune anticipation de plusieurs coups.
-    # Note = 3 * (mes sorties - sorties de l'adversaire) + mes sorties non bouchées.
+    # Tactique gloutonne : pour chaque coup possible on joue on note la position obtenue et on l'annule y'a aucune anticipation de plusieurs coups.
+    # Note = 3 * (mes sorties - sorties de l'adversaire) + mes sorties non cul-de-sac.
 
     def __init__(self, jeu, numero):
         self.__jeu = jeu

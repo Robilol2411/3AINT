@@ -5,8 +5,8 @@ from partie import Partie
 
 class Concours:
     # Fait s'affronter des joueurs sans affichage et calcule des statistiques.
-    # Un joueur est décrit par un tuple (nom, parametres), ex. ("minmax", {"profondeur": 3}).
-    # Dans un duel, chaque joueur commence la moitié des parties.
+    # Un joueur est décrit par un tuple (nom, parametres)("minmax", {"profondeur": 3}).
+    # Dans un duel chaque joueur commence la moitié des parties.
 
     def __init__(self, parties=100, lignes=5, colonnes=10):
         self.__parties = parties
@@ -15,7 +15,7 @@ class Concours:
         self.__resultats = []
 
     def duel(self, config_a, config_b):
-        # compteurs : victoires de A en commençant / en second, idem pour B, nuls
+        # compteurs : victoires de A en commençant / en second, pareil pour B, match nuls
         a_premier = 0
         a_second = 0
         b_premier = 0

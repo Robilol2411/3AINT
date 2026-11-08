@@ -7,7 +7,7 @@ from constantes import (
 
 
 class Interface:
-    # Fenêtre Tkinter : affiche la partie et récupère les clics du joueur humain.
+    # Fenêtre Tkinter affiche la partie et récupère les clics du joueur humain.
 
     def __init__(self, jeu):
         self.__jeu = jeu
@@ -34,7 +34,7 @@ class Interface:
         self.__dernier_coup = case
 
     def dessiner(self, cibles=()):
-        # redessine le plateau ; les cases de 'cibles' sont surlignées
+        # redessine le plateau les cases de cibles sont surlignées
         self.__toile.delete("all")
         for l in range(self.__jeu.nb_lignes()):
             for c in range(self.__jeu.nb_colonnes()):
