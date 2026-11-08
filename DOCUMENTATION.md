@@ -12,6 +12,7 @@ méthodes publiques. Les méthodes qui renvoient des données du plateau renvoie
 
 Chaque joueur (`Human`, `StupidBot`, `MinMax`, `Glouton`, `MCTS`) reçoit une instance de
 `ManicMinelayers` dans son constructeur et possède deux méthodes :
+
 - `proposer_coup()` : renvoie un coup `(ligne, colonne)` **sans le jouer**
 - `nom()` : renvoie son nom (pour l'affichage et les statistiques)
 
@@ -22,16 +23,16 @@ pose son pion ; ensuite c'est la case d'arrivée du pion.
 
 ## 2. Structures de données
 
-| Donnée | Structure | Où |
-|---|---|---|
-| Plateau | liste de listes d'entiers, `plateau[ligne][colonne]` | `ManicMinelayers` |
-| Contenu d'une case | `VIDE = 0`, `MARQUE = -1`, `1` ou `2` (pion du joueur) | `constantes.py` |
-| Positions des pions | liste `[None, pos1, pos2]` (l'indice est le numéro du joueur), `None` tant que le pion n'est pas posé | `ManicMinelayers` |
-| Historique des coups | liste de tuples `(joueur, ancienne_position, nouvelle_position)`, utilisée comme une pile | `ManicMinelayers` |
-| Coups possibles | liste de tuples `(ligne, colonne)` | partout |
-| Sauts du cavalier | tuple des 8 déplacements `(dl, dc)` | `constantes.py` |
-| Arbre de recherche MCTS | objets `Sommet` qui contiennent la liste de leurs enfants et un lien vers leur parent | `sommet.py` |
-| Cases déjà atteintes (heuristiques) | listes de cases | `minmax.py` |
+| Donnée                              | Structure                                                                                             | Où                |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------- |
+| Plateau                             | liste de listes d'entiers, `plateau[ligne][colonne]`                                                  | `ManicMinelayers` |
+| Contenu d'une case                  | `VIDE = 0`, `MARQUE = -1`, `1` ou `2` (pion du joueur)                                                | `constantes.py`   |
+| Positions des pions                 | liste `[None, pos1, pos2]` (l'indice est le numéro du joueur), `None` tant que le pion n'est pas posé | `ManicMinelayers` |
+| Historique des coups                | liste de tuples `(joueur, ancienne_position, nouvelle_position)`, utilisée comme une pile             | `ManicMinelayers` |
+| Coups possibles                     | liste de tuples `(ligne, colonne)`                                                                    | partout           |
+| Sauts du cavalier                   | tuple des 8 déplacements `(dl, dc)`                                                                   | `constantes.py`   |
+| Arbre de recherche MCTS             | objets `Sommet` qui contiennent la liste de leurs enfants et un lien vers leur parent                 | `sommet.py`       |
+| Cases déjà atteintes (heuristiques) | listes de cases                                                                                       | `minmax.py`       |
 
 Le plateau est une simple liste de listes car il est petit (5x10 par défaut). On peut ainsi
 retrouver n'importe quelle case en une opération.
@@ -51,6 +52,7 @@ MCTS a besoin de garder plusieurs positions en même temps (une par sommet), il 
 ### `ManicMinelayers` (manic_minelayers.py) - le moteur
 
 Attributs (tous privés) :
+
 - `__lignes`, `__colonnes` : dimensions
 - `__plateau` : la liste de listes
 - `__pions` : positions des deux pions
@@ -59,6 +61,7 @@ Attributs (tous privés) :
 - `__vainqueur` : `None` si la partie continue, `1` ou `2` pour le gagnant, `0` pour un nul
 
 Méthodes publiques :
+
 - `nb_lignes()`, `nb_colonnes()` : dimensions
 - `contenu(ligne, colonne)` : contenu d'une case
 - `grille()` : copie du plateau
@@ -154,7 +157,7 @@ nombre de niveaux restants) pour une victoire, `0` pour un nul, `PERTE - reste` 
 pour une défaite. Le `reste` fait préférer les victoires rapides et les défaites lointaines.
 
 **Choix à la racine.** `proposer_coup` évalue chaque coup possible, garde les coups qui ont
-le meilleur score et en tire un au hasard parmi les ex æquo.
+le meilleur score et en tire un au hasard parmi les égalitézs.
 
 **Pendant le placement** (un des pions n'est pas posé), les heuristiques renvoient 0 car il
 n'y a rien à comparer : le choix de la ligne de départ vient de la recherche en profondeur.
@@ -164,6 +167,7 @@ n'y a rien à comparer : le choix de la ligne de départ vient de la recherche e
 Idée : plus un joueur a de possibilités de déplacement, mieux il est placé.
 
 Pour chaque joueur, on calcule :
+
 - `a` = nombre de cases libres atteignables en **1 saut** (ses coups possibles)
 - `b` = nombre de cases libres atteignables en **1 ou 2 sauts** (sans compter deux fois la
   même case)
@@ -201,6 +205,7 @@ Attributs : `__jeu`, `__numero`.
 **Principe.** On étudie seulement la position **juste après** chaque coup possible, sans
 regarder les coups suivants de l'adversaire. Contrairement à MinMax, il n'y a pas
 d'arborescence. Pour chaque coup possible :
+
 1. on joue le coup (`appliquer`)
 2. on note la position obtenue (`__noter_position`)
 3. on annule le coup (`retirer_dernier`)
@@ -208,6 +213,7 @@ d'arborescence. Pour chaque coup possible :
 On garde le coup de meilleure note (au hasard s'il y en a plusieurs).
 
 **Note d'une position :**
+
 - partie gagnée : `GAIN` (1000) ; nulle : `NUL` (0) ; perdue : `PERTE` (-1000)
 - pendant le placement (l'adversaire n'a pas encore de pion) : le nombre de sorties de mon pion
 - sinon : `3 * (mes_sorties - sorties_adverses) + sorties_non_bouchees`
@@ -232,6 +238,7 @@ Un sommet représente une position de la partie. La définition est récursive :
 parent et une liste d'enfants qui sont aussi des sommets.
 
 Attributs :
+
 - `__jeu` : sa propre copie de la partie, après le coup qui mène à ce sommet
 - `__coup` : ce coup (`None` pour la racine)
 - `__parent`, `__enfants`
@@ -244,6 +251,7 @@ Attributs :
 Méthodes : `coup()`, `parent()`, `enfants()`, `auteur()`, `visites()`, `taux_de_gain()`
 (gains / visites), `partie()` (copie de la position), `est_terminal()`, `est_plein()` (tous
 les coups ont un enfant), et les trois méthodes des étapes de l'algorithme :
+
 - `descendre(exploration)` : sélection, **récursive**
 - `etendre()` : expansion, crée un enfant avec un coup de `__a_essayer`
 - `remonter(vainqueur)` : rétropropagation, **récursive**, remonte jusqu'à la racine
@@ -263,6 +271,7 @@ fois les 4 étapes :
 
    Le premier terme favorise les coups qui gagnent souvent (exploitation), le second les coups
    peu essayés (exploration). `C` règle l'équilibre : plus il est grand, plus on explore.
+
 2. **Expansion** : on crée un enfant pour un coup pas encore essayé (sauf si le sommet est
    terminal).
 3. **Simulation** : on joue la partie jusqu'à la fin sur une copie. Avec la politique
