@@ -1,30 +1,29 @@
-# valeurs des cases
+# Contenu d'une case
 VIDE = 0
 MARQUE = -1
 
-# taille du plateau par defaut
+# Dimensions par défaut du plateau (lignes, colonnes)
 M_DEFAUT = 5
 N_DEFAUT = 10
 
-# les 8 sauts du cavalier (dl, dc)
-DEPLACEMENTS_CAVALIER = (
-    (-2, -1), (-2, 1),
-    (-1, -2), (-1, 2),
-    (1, -2), (1, 2),
-    (2, -1), (2, 1),
+# Sauts du cavalier, exprimés en (delta_ligne, delta_colonne)
+SAUTS = (
+    (-2, -1), (-2, 1), (-1, -2), (-1, 2),
+    (1, -2), (1, 2), (2, -1), (2, 1),
 )
 
-# scores de fin de partie pour les IA
-SCORE_VICTOIRE = 1000
-SCORE_DEFAITE = -1000
-SCORE_NUL = 0
+# Valeurs de fin de partie utilisées par les IA
+GAIN = 1000
+PERTE = -1000
+NUL = 0
 
-# affichage
-LARGEUR_MAX = 800
+# Affichage
+LARGEUR_MAX = 900
 HAUTEUR_MAX = 600
-PAUSE_ENTRE_COUPS = 500
-COULEUR_VIDE = "white"
-COULEUR_MARQUE = "gray40"
-COULEUR_JOUEUR_1 = "royal blue"
-COULEUR_JOUEUR_2 = "firebrick"
-COULEUR_SURLIGNAGE = "gold"
+DELAI_COUP_MS = 400
+COULEUR_CASE_LIBRE = "#f4f1e8"
+COULEUR_CASE_MARQUEE = "#555555"
+COULEUR_PION_1 = "#2a6fdb"
+COULEUR_PION_2 = "#d63b2f"
+COULEUR_CIBLE = "#ffd24a"
+COULEUR_DERNIER_COUP = "#9fd8a0"

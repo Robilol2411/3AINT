@@ -1,102 +1,81 @@
-import importlib
-
+from concours import Concours
 from constantes import M_DEFAUT, N_DEFAUT
-from human import Human
+from fabrique import NOMS, creer_joueur
 from interface import Interface
 from manic_minelayers import ManicMinelayers
 from partie import Partie
 
-# nom du fichier et de la classe de chaque IA
-IA = (
-    ("stupid_bot", "StupidBot"),
-    ("minmax", "MinMax"),
-    ("mcts", "MCTS"),
-    ("glouton", "Glouton"),
-)
 
-
-def charger_ia() -> dict:
-    #Renvoie les classes des IA déjà présentes dans le projet, rangées par nom.
-    classes = {}
-    for fichier, nom in IA:
-        try:
-            module = importlib.import_module(fichier)
-        except ModuleNotFoundError as erreur:
-            # le fichier n'est pas encore la, on l'enleve juste du menu
-            if erreur.name != fichier:
-                raise
-            continue
-        classes[nom] = getattr(module, nom)
-    return classes
-
-
-def demander_entier(question: str, minimum: int, defaut: int) -> int:
-    #Pose une question jusqu'à avoir un entier valable et le renvoie.
+def demander_entier(question, defaut):
+    # pose la question jusqu'à obtenir un entier positif
     while True:
-        reponse = input(f"{question} [{defaut}] : ").strip()
+        reponse = input(question + " [" + str(defaut) + "] : ")
         if reponse == "":
             return defaut
-        if reponse.isdigit() and int(reponse) >= minimum:
+        if reponse.isdigit() and int(reponse) > 0:
             return int(reponse)
-        print(f"Il faut un entier supérieur ou égal à {minimum}.")
+        print("Il faut un entier positif.")
 
 
-def demander_parametres(nom: str) -> dict:
-    #Demande les paramètres d'une IA et les renvoie dans un dictionnaire.
+def choisir_joueur(numero):
+    # renvoie le choix sous la forme (nom, parametres)
+    print("Joueur", numero, ":")
+    for i in range(len(NOMS)):
+        print(" ", i + 1, "-", NOMS[i])
+    choix = demander_entier("Choix", 1)
+    while choix > len(NOMS):
+        choix = demander_entier("Choix", 1)
+    nom = NOMS[choix - 1]
+
     parametres = {}
-    if nom == "MinMax":
-        parametres["profondeur"] = demander_entier("Profondeur", 1, 4)
-        parametres["heuristique"] = demander_entier("Heuristique (1 ou 2)", 1, 1)
-    elif nom == "MCTS":
-        parametres["iterations_max"] = demander_entier("Itérations", 1, 1000)
-    return parametres
+    if nom == "minmax":
+        parametres["profondeur"] = demander_entier("Profondeur", 4)
+        parametres["heuristique"] = demander_entier("Heuristique (1 ou 2)", 1)
+    elif nom == "mcts":
+        parametres["iterations"] = demander_entier("Itérations", 1000)
+        if demander_entier("Politique de simulation (1 = aléatoire, 2 = gloutonne)", 1) == 2:
+            parametres["politique"] = "glouton"
+    return nom, parametres
 
 
-def choisir_joueur(numero: int, classes: dict) -> tuple[str, dict]:
-    #Fait choisir un joueur et renvoie son nom et ses paramètres.
-    noms = ["Humain"]
-    for nom in classes:
-        noms.append(nom)
+def lancer_partie():
+    lignes = demander_entier("Nombre de lignes", M_DEFAUT)
+    colonnes = demander_entier("Nombre de colonnes", N_DEFAUT)
+    choix1 = choisir_joueur(1)
+    choix2 = choisir_joueur(2)
 
-    print(f"\nJoueur {numero} :")
-    for i in range(len(noms)):
-        print(f"  {i + 1}. {noms[i]}")
-
-    choix = demander_entier("Ton choix", 1, 1)
-    while choix > len(noms):
-        print("Ce numéro n'est pas dans la liste.")
-        choix = demander_entier("Ton choix", 1, 1)
-
-    nom = noms[choix - 1]
-    return nom, demander_parametres(nom)
-
-
-def creer_joueur(choix: tuple[str, dict], jeu: ManicMinelayers, numero: int,
-                 interface: Interface, classes: dict):
-    #Crée le joueur choisi dans le menu et le renvoie.
-    nom, parametres = choix
-    if nom == "Humain":
-        return Human(jeu, numero, interface)
-    return classes[nom](jeu, numero, **parametres)
-
-
-def main() -> None:
-    #Affiche le menu puis lance la partie.
-    classes = charger_ia()
-    print("=== Manic Minelayers ===")
-    m = demander_entier("Nombre de lignes", 1, M_DEFAUT)
-    n = demander_entier("Nombre de colonnes", 2, N_DEFAUT)
-    choix1 = choisir_joueur(1, classes)
-    choix2 = choisir_joueur(2, classes)
-
-    jeu = ManicMinelayers(m, n)
+    jeu = ManicMinelayers(lignes, colonnes)
     interface = Interface(jeu)
-    joueur1 = creer_joueur(choix1, jeu, 1, interface, classes)
-    joueur2 = creer_joueur(choix2, jeu, 2, interface, classes)
+    joueur1 = creer_joueur(choix1[0], jeu, 1, interface, **choix1[1])
+    joueur2 = creer_joueur(choix2[0], jeu, 2, interface, **choix2[1])
+    Partie(jeu, joueur1, joueur2, interface, True).lancer()
+    interface.garder_ouverte()
 
-    partie = Partie(jeu, joueur1, joueur2, interface)
-    partie.lancer()
-    interface.attendre_fermeture()
+
+def lancer_concours():
+    parties = demander_entier("Parties par duel", 100)
+    print("Combien de joueurs dans le concours ?")
+    nombre = demander_entier("Nombre", 3)
+    configs = []
+    for i in range(nombre):
+        choix = choisir_joueur(i + 1)
+        if choix[0] == "humain":
+            print("Un humain ne peut pas jouer dans un concours, ignoré.")
+        else:
+            configs.append(choix)
+    concours = Concours(parties)
+    concours.tournoi(configs)
+    concours.afficher()
+
+
+def main():
+    print("=== Manic Minelayers ===")
+    print("1 - Jouer une partie (avec fenêtre)")
+    print("2 - Concours (sans affichage)")
+    if demander_entier("Choix", 1) == 2:
+        lancer_concours()
+    else:
+        lancer_partie()
 
 
 if __name__ == "__main__":

@@ -1,68 +1,58 @@
-from constantes import MARQUE, PAUSE_ENTRE_COUPS, VIDE
-from interface import Interface
-from manic_minelayers import ManicMinelayers
+from constantes import DELAI_COUP_MS, MARQUE, VIDE
 
 
 class Partie:
-    def __init__(self, jeu: ManicMinelayers, joueur1, joueur2,
-                 interface: Interface | None = None, console: bool = False) -> None:
+    # Fait jouer deux joueurs à tour de rôle, avec ou sans fenêtre.
+
+    def __init__(self, jeu, joueur1, joueur2, interface=None, verbeux=False):
         self.__jeu = jeu
-        # indice = numero du joueur, comme dans le moteur
+        # indice = numéro du joueur
         self.__joueurs = [None, joueur1, joueur2]
         self.__interface = interface
-        self.__console = console
+        self.__verbeux = verbeux
 
-    def lancer(self) -> int:
-        #Joue la partie jusqu'au bout et renvoie le gagnant (1, 2 ou 0 pour un nul).
-        self.__afficher_plateau()
-        while not self.__jeu.est_finie():
-            numero = self.__jeu.get_joueur_courant()
+    def lancer(self):
+        # joue jusqu'à la fin et renvoie 1, 2 ou 0 (nul)
+        self.__montrer()
+        while not self.__jeu.terminee():
+            numero = self.__jeu.trait()
             joueur = self.__joueurs[numero]
-            self.__afficher_texte(f"Tour de {joueur.get_nom()} (joueur {numero})")
-
-            coup = joueur.choisir_coup()
-            self.__jeu.jouer(coup)
-
-            self.__afficher_plateau()
-            self.__afficher_texte(f"{joueur.get_nom()} (joueur {numero}) joue {coup}")
+            self.__annoncer(joueur.nom() + " (joueur " + str(numero) + ") réfléchit...")
+            coup = joueur.proposer_coup()
+            self.__jeu.appliquer(coup)
             if self.__interface is not None:
-                self.__interface.pause(PAUSE_ENTRE_COUPS)
+                self.__interface.memoriser_dernier_coup(coup)
+            self.__montrer()
+            self.__annoncer(joueur.nom() + " (joueur " + str(numero) + ") joue " + str(coup))
+            if self.__interface is not None:
+                self.__interface.temporiser(DELAI_COUP_MS)
+        self.__annoncer(self.__bilan())
+        return self.__jeu.vainqueur()
 
-        self.__afficher_texte(self.__texte_resultat())
-        return self.__jeu.get_gagnant()
-
-    def __texte_resultat(self) -> str:
-        #Renvoie la phrase de fin de partie.
-        gagnant = self.__jeu.get_gagnant()
+    def __bilan(self):
+        gagnant = self.__jeu.vainqueur()
         if gagnant == 0:
             return "Match nul"
-        return f"Victoire de {self.__joueurs[gagnant].get_nom()} (joueur {gagnant})"
+        return "Victoire de " + self.__joueurs[gagnant].nom() + " (joueur " + str(gagnant) + ")"
 
-    def __afficher_texte(self, texte: str) -> None:
-        #Affiche un message dans la fenêtre et dans le terminal
+    def __annoncer(self, texte):
         if self.__interface is not None:
-            self.__interface.afficher_message(texte)
-        if self.__console:
+            self.__interface.message(texte)
+        if self.__verbeux:
             print(texte)
 
-    def __afficher_plateau(self) -> None:
-        #Affiche le plateau dans la fenêtre et dans le terminal
+    def __montrer(self):
         if self.__interface is not None:
-            self.__interface.afficher()
-        if self.__console:
-            self.__afficher_plateau_console()
-
-    def __afficher_plateau_console(self) -> None:
-        #Ecrit le plateau dans le terminal : . vide, x marque, 1 et 2 les pions.
-        plateau = self.__jeu.get_plateau()
-        for ligne in plateau:
-            texte = ""
-            for case in ligne:
-                if case == VIDE:
-                    texte += ". "
-                elif case == MARQUE:
-                    texte += "x "
-                else:
-                    texte += str(case) + " "
-            print(texte)
-        print()
+            self.__interface.dessiner()
+        if self.__verbeux:
+            for ligne in self.__jeu.grille():
+                texte = ""
+                for case in ligne:
+                    if case == VIDE:
+                        texte += ". "
+                    elif case == MARQUE:
+                        texte += "x "
+                    else:
+                        texte += str(case) + " "
+                print(texte)
+            print()
