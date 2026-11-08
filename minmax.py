@@ -1,143 +1,112 @@
-
 import random
-from collections import deque
 
-from constantes import DEPLACEMENTS_CAVALIER, SCORE_DEFAITE, SCORE_VICTOIRE, VIDE
-from manic_minelayers import ManicMinelayers
+from constantes import GAIN, PERTE
 
 
 class MinMax:
+    # MinMax avec élagage alpha-bêta (écrit en négamax : la valeur d'une position
+    # est toujours vue du joueur qui a le trait, et on change le signe à chaque niveau).
+    # heuristique 1 = mobilité, heuristique 2 = territoire (cases atteintes en premier).
 
-    def __init__(self, jeu: ManicMinelayers, numero: int, profondeur: int = 4,
-                 heuristique: int = 1) -> None:
-       
+    def __init__(self, jeu, numero, profondeur=4, heuristique=1):
+        if heuristique != 1 and heuristique != 2:
+            raise ValueError("L'heuristique doit valoir 1 ou 2")
         self.__jeu = jeu
         self.__numero = numero
         self.__profondeur = profondeur
         self.__heuristique = heuristique
 
-    def choisir_coup(self) -> tuple[int, int]:
-        
-        meilleurs_coups = []
-        meilleur_score = float("-inf")
+    def nom(self):
+        return "MinMax(h" + str(self.__heuristique) + ", p" + str(self.__profondeur) + ")"
 
-        for coup in self.__jeu.coups_possibles(self.__numero):
-            self.__jeu.jouer(coup)
-            # Après mon coup, c'est à l'adversaire de jouer : on minimise.
-            score = self.__alphabeta(self.__profondeur - 1, float("-inf"),
-                                     float("inf"), False)
-            self.__jeu.annuler()
-
-            if score > meilleur_score:
+    def proposer_coup(self):
+        meilleur_score = None
+        meilleurs = []
+        for coup in self.__jeu.mouvements(self.__numero):
+            self.__jeu.appliquer(coup)
+            score = -self.__negamax(self.__profondeur - 1, -100000, 100000,
+                                    self.__jeu.trait())
+            self.__jeu.retirer_dernier()
+            if meilleur_score is None or score > meilleur_score:
                 meilleur_score = score
-                meilleurs_coups = [coup]
+                meilleurs = [coup]
             elif score == meilleur_score:
-                meilleurs_coups.append(coup)
+                meilleurs.append(coup)
+        return random.choice(meilleurs)
 
-        return random.choice(meilleurs_coups)
-
-    def get_nom(self) -> str:
-       
-        return f"MinMax h{self.__heuristique} p{self.__profondeur}"
-
-    def __alphabeta(self, profondeur: int, alpha: float, beta: float,
-                    maximiser: bool) -> float:
-        # Score de la position avec élagage alpha-bêta (positif = bon pour le bot).
-        # alpha = meilleur score du bot, beta = meilleur score de l'adversaire.
-        # 1. Partie terminée : on note selon le vainqueur, en favorisant les
-        #    victoires rapides et en retardant les défaites.
-        if self.__jeu.est_finie():
-            gagnant = self.__jeu.get_gagnant()
-            if gagnant == self.__numero:
-                return SCORE_VICTOIRE + profondeur
-            if gagnant == 0 or gagnant is None:
+    def __negamax(self, reste, alpha, beta, joueur):
+        # valeur de la position pour 'joueur', qui a le trait
+        if self.__jeu.terminee():
+            gagnant = self.__jeu.vainqueur()
+            if gagnant == joueur:
+                return GAIN + reste      # victoire rapide = mieux
+            if gagnant == 0:
                 return 0
-            return SCORE_DEFAITE - profondeur
+            return PERTE - reste         # défaite lointaine = moins mal
+        if reste == 0:
+            return self.__evaluer(joueur)
 
-        # 2. Limite de profondeur atteinte : on estime la position.
-        if profondeur == 0:
-            return self.__evaluer()
-
-        # 3. Sinon on explore tous les coups du joueur courant.
-        if maximiser:
-            meilleur = float("-inf")
-        else:
-            meilleur = float("inf")
-
-        for coup in self.__jeu.coups_possibles():
-            self.__jeu.jouer(coup)
-            score = self.__alphabeta(profondeur - 1, alpha, beta, not maximiser)
-            self.__jeu.annuler()
-
-            if maximiser:
-                if score > meilleur:
-                    meilleur = score
-                alpha = max(alpha, meilleur)
-            else:
-                if score < meilleur:
-                    meilleur = score
-                beta = min(beta, meilleur)
-
-            # Élagage : la branche ne peut plus changer le résultat.
+        meilleur = -100000
+        for coup in self.__jeu.mouvements():
+            self.__jeu.appliquer(coup)
+            valeur = -self.__negamax(reste - 1, -beta, -alpha, self.__jeu.autre(joueur))
+            self.__jeu.retirer_dernier()
+            if valeur > meilleur:
+                meilleur = valeur
+            if meilleur > alpha:
+                alpha = meilleur
             if alpha >= beta:
-                break
-
+                break   # élagage
         return meilleur
 
-    def __evaluer(self) -> int:
-        # Renvoie le score de la position avec l'heuristique choisie.
+    def __evaluer(self, joueur):
+        if self.__jeu.phase_placement():
+            return 0
         if self.__heuristique == 2:
-            return self.__heuristique_2()
-        return self.__heuristique_1()
+            return self.__territoire(joueur)
+        return self.__mobilite(joueur)
 
-    def __heuristique_1(self) -> int:
-        # Heuristique locale : mes coups moins ceux de l'adversaire (0 au placement).
-        if self.__jeu.est_en_placement():
-            return 0
+    def __mobilite(self, joueur):
+        # heuristique 1 : mes coups moins ceux de l'adversaire,
+        # en comptant aussi les cases à deux sauts
+        adversaire = self.__jeu.autre(joueur)
+        moi = self.__cases_a_deux_sauts(joueur)
+        lui = self.__cases_a_deux_sauts(adversaire)
+        return 3 * (moi[0] - lui[0]) + (moi[1] - lui[1])
 
-        adversaire = self.__jeu.get_adversaire(self.__numero)
-        mes_coups = self.__jeu.coups_possibles(self.__numero)
-        ses_coups = self.__jeu.coups_possibles(adversaire)
-        return len(mes_coups) - len(ses_coups)
+    def __cases_a_deux_sauts(self, joueur):
+        # renvoie (nombre de cases à 1 saut, nombre de cases à 1 ou 2 sauts)
+        premieres = self.__jeu.mouvements(joueur)
+        toutes = premieres[:]
+        for case in premieres:
+            for suivante in self.__jeu.sauts_depuis(case):
+                if suivante not in toutes:
+                    toutes.append(suivante)
+        return len(premieres), len(toutes)
 
-    def __heuristique_2(self) -> int:
-        # Heuristique globale : différence de l'espace atteignable (0 au placement).
-        if self.__jeu.est_en_placement():
-            return 0
+    def __territoire(self, joueur):
+        # heuristique 2 : les deux pions s'étendent couche par couche ; on compte
+        # les cases atteintes en premier par chacun. Le joueur qui a le trait
+        # commence, donc il gagne les égalités.
+        adversaire = self.__jeu.autre(joueur)
+        front_moi = [self.__jeu.pion(joueur)]
+        front_lui = [self.__jeu.pion(adversaire)]
+        pris = [self.__jeu.pion(joueur), self.__jeu.pion(adversaire)]
+        cases_moi = 0
+        cases_lui = 0
+        while len(front_moi) > 0 or len(front_lui) > 0:
+            front_moi = self.__etendre(front_moi, pris)
+            cases_moi += len(front_moi)
+            front_lui = self.__etendre(front_lui, pris)
+            cases_lui += len(front_lui)
+        return cases_moi - cases_lui
 
-        adversaire = self.__jeu.get_adversaire(self.__numero)
-        mon_espace = self.__espace_atteignable(self.__numero)
-        son_espace = self.__espace_atteignable(adversaire)
-        return mon_espace - son_espace
-
-    def __espace_atteignable(self, joueur: int) -> int:
-        # Compte les cases vides atteignables en 3 sauts de cavalier (BFS).
-        depart = self.__jeu.get_position(joueur)
-        if depart is None:
-            return 0
-
-        visites = {depart}
-        a_explorer = deque([(depart, 0)])
-        atteignables = 0
-
-        while a_explorer:
-            (ligne, colonne), sauts = a_explorer.popleft()
-            if sauts == 3:
-                continue
-
-            for dl, dc in DEPLACEMENTS_CAVALIER:
-                nouvelle_ligne = ligne + dl
-                nouvelle_colonne = colonne + dc
-                if not (0 <= nouvelle_ligne < self.__jeu.get_m()
-                        and 0 <= nouvelle_colonne < self.__jeu.get_n()):
-                    continue
-                if (nouvelle_ligne, nouvelle_colonne) in visites:
-                    continue
-                if self.__jeu.get_case(nouvelle_ligne, nouvelle_colonne) != VIDE:
-                    continue
-
-                visites.add((nouvelle_ligne, nouvelle_colonne))
-                atteignables += 1
-                a_explorer.append(((nouvelle_ligne, nouvelle_colonne), sauts + 1))
-
-        return atteignables
+    def __etendre(self, front, pris):
+        # nouvelles cases atteintes en un saut depuis le front (ajoutées à 'pris')
+        suivant = []
+        for case in front:
+            for voisine in self.__jeu.sauts_depuis(case):
+                if voisine not in pris:
+                    pris.append(voisine)
+                    suivant.append(voisine)
+        return suivant

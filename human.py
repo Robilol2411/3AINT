@@ -1,23 +1,18 @@
-from interface import Interface
-from manic_minelayers import ManicMinelayers
-
-
 class Human:
-    def __init__(self, jeu: ManicMinelayers, numero: int, interface: Interface) -> None:
-        #Crée le joueur.
+    # Joueur humain : le coup est choisi par un clic sur une case surlignée.
+
+    def __init__(self, jeu, numero, interface):
         self.__jeu = jeu
         self.__numero = numero
         self.__interface = interface
 
-    def choisir_coup(self) -> tuple[int, int]:
-        #Surligne les coups possibles et renvoie la case cliquée, sans la jouer.
-        coups = self.__jeu.coups_possibles()
-        self.__interface.surligner(coups)
-        coup = self.__interface.attendre_clic()
-        while coup not in coups:
-            coup = self.__interface.attendre_clic()
-        return coup
-
-    def get_nom(self) -> str:
-        #Renvoie le nom du joueur.
+    def nom(self):
         return "Humain"
+
+    def proposer_coup(self):
+        permis = self.__jeu.mouvements(self.__numero)
+        self.__interface.dessiner(permis)
+        case = self.__interface.attendre_case()
+        while case not in permis:
+            case = self.__interface.attendre_case()
+        return case

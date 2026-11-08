@@ -1,132 +1,109 @@
 import tkinter as tk
 
 from constantes import (
-    COULEUR_JOUEUR_1,
-    COULEUR_JOUEUR_2,
-    COULEUR_MARQUE,
-    COULEUR_SURLIGNAGE,
-    COULEUR_VIDE,
-    HAUTEUR_MAX,
-    LARGEUR_MAX,
-    MARQUE,
+    COULEUR_CASE_LIBRE, COULEUR_CASE_MARQUEE, COULEUR_CIBLE, COULEUR_DERNIER_COUP,
+    COULEUR_PION_1, COULEUR_PION_2, HAUTEUR_MAX, LARGEUR_MAX, MARQUE,
 )
-from manic_minelayers import ManicMinelayers
+
 
 class Interface:
-    def __init__(self, jeu: ManicMinelayers) -> None:
+    # Fenêtre Tkinter : affiche la partie et récupère les clics du joueur humain.
+
+    def __init__(self, jeu):
         self.__jeu = jeu
-        self.__m = jeu.get_m()
-        self.__n = jeu.get_n()
-        self.__taille_case = min(LARGEUR_MAX // self.__n, HAUTEUR_MAX // self.__m)
-        self.__clic = None
-        self.__attend_clic = False
-        self.__fermee = False
+        self.__cote = min(LARGEUR_MAX // jeu.nb_colonnes(), HAUTEUR_MAX // jeu.nb_lignes())
+        self.__dernier_clic = None
+        self.__clic_attendu = False
+        self.__ferme = False
+        self.__dernier_coup = None
 
-        self.__fenetre = tk.Tk()
-        self.__fenetre.title("Manic Minelayers")
-        self.__fenetre.protocol("WM_DELETE_WINDOW", self.__fermer)
-        # sert a bloquer le programme dans attendre_clic et pause
-        self.__attente = tk.IntVar(self.__fenetre, 0)
+        self.__racine = tk.Tk()
+        self.__racine.title("Manic Minelayers")
+        self.__racine.protocol("WM_DELETE_WINDOW", self.__fermer)
+        # sert à bloquer le programme pendant une attente
+        self.__reveil = tk.IntVar(self.__racine, 0)
+        self.__bandeau = tk.Label(self.__racine, font=("Arial", 13))
+        self.__bandeau.pack(pady=6)
+        self.__toile = tk.Canvas(self.__racine,
+                                 width=jeu.nb_colonnes() * self.__cote,
+                                 height=jeu.nb_lignes() * self.__cote)
+        self.__toile.pack(padx=8, pady=8)
+        self.__toile.bind("<Button-1>", self.__sur_clic)
 
-        self.__message = tk.Label(self.__fenetre, font=("Arial", 14))
-        self.__message.pack(pady=5)
+    def memoriser_dernier_coup(self, case):
+        self.__dernier_coup = case
 
-        largeur = self.__n * self.__taille_case
-        hauteur = self.__m * self.__taille_case
-        self.__canevas = tk.Canvas(self.__fenetre, width=largeur, height=hauteur)
-        self.__canevas.pack(padx=10, pady=10)
-        self.__canevas.bind("<Button-1>", self.__sur_clic)
+    def dessiner(self, cibles=()):
+        # redessine le plateau ; les cases de 'cibles' sont surlignées
+        self.__toile.delete("all")
+        for l in range(self.__jeu.nb_lignes()):
+            for c in range(self.__jeu.nb_colonnes()):
+                self.__dessiner_case(l, c, (l, c) in cibles)
+        self.__racine.update_idletasks()
 
-    def afficher(self) -> None:
-        #Dessine le plateau, les marques et les deux pions.
-        self.__canevas.delete("all")
-        for ligne in range(self.__m):
-            for colonne in range(self.__n):
-                self.__dessiner_case(ligne, colonne)
-        self.__fenetre.update_idletasks()
+    def message(self, texte):
+        self.__bandeau.config(text=texte)
+        self.__racine.update_idletasks()
 
-    def surligner(self, coups: list[tuple[int, int]]) -> None:
-        """Met en évidence des cases du plateau.
+    def attendre_case(self):
+        # bloque jusqu'à un clic sur le plateau et renvoie (ligne, colonne)
+        self.__clic_attendu = True
+        self.__racine.wait_variable(self.__reveil)
+        self.__clic_attendu = False
+        self.__quitter_si_ferme()
+        return self.__dernier_clic
 
-        Paramètre : coups la liste des cases à surligner.
-        """
-        for ligne, colonne in coups:
-            x1, y1, x2, y2 = self.__coordonnees(ligne, colonne)
-            self.__canevas.create_rectangle(x1, y1, x2, y2, fill=COULEUR_SURLIGNAGE)
-        self.__fenetre.update_idletasks()
+    def temporiser(self, ms):
+        # pause pour laisser voir le coup joué
+        self.__racine.after(ms, self.__signaler)
+        self.__racine.wait_variable(self.__reveil)
+        self.__quitter_si_ferme()
 
-    def attendre_clic(self) -> tuple[int, int]:
-        #Bloque jusqu'au clic sur une case et renvoie (ligne, colonne).
-        self.__attend_clic = True
-        self.__fenetre.wait_variable(self.__attente)
-        self.__attend_clic = False
-        self.__verifier_fermeture()
-        return self.__clic
+    def garder_ouverte(self):
+        self.__racine.mainloop()
+        self.__racine.destroy()
 
-    def afficher_message(self, texte: str) -> None:
-        #Affiche un texte au dessus du plateau.
-        self.__message.config(text=texte)
-        self.__fenetre.update_idletasks()
-
-    def pause(self, ms: int) -> None:
-        #Attend un moment pour laisser voir le coup joué.
-        self.__fenetre.after(ms, self.__reveiller)
-        self.__fenetre.wait_variable(self.__attente)
-        self.__verifier_fermeture()
-
-    def attendre_fermeture(self) -> None:
-        #Garde la fenêtre ouverte jusqu'à ce que l'utilisateur la ferme.
-        self.__fenetre.mainloop()
-        self.__fenetre.destroy()
-
-    def __dessiner_case(self, ligne: int, colonne: int) -> None:
-        #Dessine une case et le pion qu'elle contient.
-        valeur = self.__jeu.get_case(ligne, colonne)
-        if valeur == MARQUE:
-            couleur = COULEUR_MARQUE
+    def __dessiner_case(self, l, c, cible):
+        contenu = self.__jeu.contenu(l, c)
+        if cible:
+            fond = COULEUR_CIBLE
+        elif (l, c) == self.__dernier_coup:
+            fond = COULEUR_DERNIER_COUP
+        elif contenu == MARQUE:
+            fond = COULEUR_CASE_MARQUEE
         else:
-            couleur = COULEUR_VIDE
+            fond = COULEUR_CASE_LIBRE
+        x = c * self.__cote
+        y = l * self.__cote
+        self.__toile.create_rectangle(x, y, x + self.__cote, y + self.__cote, fill=fond)
+        if contenu == 1 or contenu == 2:
+            if contenu == 1:
+                couleur = COULEUR_PION_1
+            else:
+                couleur = COULEUR_PION_2
+            marge = self.__cote // 7
+            self.__toile.create_oval(x + marge, y + marge,
+                                     x + self.__cote - marge, y + self.__cote - marge,
+                                     fill=couleur)
 
-        x1, y1, x2, y2 = self.__coordonnees(ligne, colonne)
-        self.__canevas.create_rectangle(x1, y1, x2, y2, fill=couleur)
-
-        marge = self.__taille_case // 6
-        if valeur == 1:
-            self.__canevas.create_oval(x1 + marge, y1 + marge, x2 - marge, y2 - marge,
-                                       fill=COULEUR_JOUEUR_1)
-        elif valeur == 2:
-            self.__canevas.create_oval(x1 + marge, y1 + marge, x2 - marge, y2 - marge,
-                                       fill=COULEUR_JOUEUR_2)
-
-    def __coordonnees(self, ligne: int, colonne: int) -> tuple[int, int, int, int]:
-        #Renvoie les coins d'une case en pixels.
-        x1 = colonne * self.__taille_case
-        y1 = ligne * self.__taille_case
-        return x1, y1, x1 + self.__taille_case, y1 + self.__taille_case
-
-    def __sur_clic(self, evenement: tk.Event) -> None:
-        #Enregistre la case cliquée si on attendait un clic.
-        if not self.__attend_clic:
+    def __sur_clic(self, evenement):
+        if not self.__clic_attendu:
             return
+        l = evenement.y // self.__cote
+        c = evenement.x // self.__cote
+        if 0 <= l < self.__jeu.nb_lignes() and 0 <= c < self.__jeu.nb_colonnes():
+            self.__dernier_clic = (l, c)
+            self.__signaler()
 
-        ligne = evenement.y // self.__taille_case
-        colonne = evenement.x // self.__taille_case
-        if 0 <= ligne < self.__m and 0 <= colonne < self.__n:
-            self.__clic = (ligne, colonne)
-            self.__reveiller()
+    def __signaler(self):
+        self.__reveil.set(self.__reveil.get() + 1)
 
-    def __reveiller(self) -> None:
-        #Débloque attendre_clic ou pause.
-        self.__attente.set(self.__attente.get() + 1)
+    def __fermer(self):
+        self.__ferme = True
+        self.__signaler()
+        self.__racine.quit()
 
-    def __fermer(self) -> None:
-        #Note que l'utilisateur a fermé la fenêtre.
-        self.__fermee = True
-        self.__reveiller()
-        self.__fenetre.quit()
-
-    def __verifier_fermeture(self) -> None:
-        #Arrête le programme si la fenêtre a été fermée pendant une attente.
-        if self.__fermee:
-            self.__fenetre.destroy()
+    def __quitter_si_ferme(self):
+        if self.__ferme:
+            self.__racine.destroy()
             raise SystemExit

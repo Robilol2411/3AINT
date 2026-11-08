@@ -1,114 +1,74 @@
-
-import time
-
+from fabrique import creer_joueur
 from manic_minelayers import ManicMinelayers
 from partie import Partie
 
 
 class Concours:
-    
+    # Fait s'affronter des joueurs sans affichage et calcule des statistiques.
+    # Un joueur est décrit par un tuple (nom, parametres), ex. ("minmax", {"profondeur": 3}).
+    # Dans un duel, chaque joueur commence la moitié des parties.
 
-    def __init__(self, nb_parties: int = 100, taille: tuple[int, int] = (5, 10)) -> None:
-        
-        self.__nb_parties = nb_parties
-        self.__taille = taille
-        self.__historique = []
+    def __init__(self, parties=100, lignes=5, colonnes=10):
+        self.__parties = parties
+        self.__lignes = lignes
+        self.__colonnes = colonnes
+        self.__resultats = []
 
-    def affronter(self, config_j1: tuple, config_j2: tuple) -> list[int]:
-        
-        debut = time.perf_counter()
-        resultats = [0, 0, 0]
-
-        for _ in range(self.__nb_parties):
-            gagnant = self.__jouer_une_partie(config_j1, config_j2)
-            if gagnant == 1:
-                resultats[0] += 1
-            elif gagnant == 2:
-                resultats[1] += 1
+    def duel(self, config_a, config_b):
+        # compteurs : victoires de A en commençant / en second, idem pour B, nuls
+        a_premier = 0
+        a_second = 0
+        b_premier = 0
+        b_second = 0
+        nuls = 0
+        for i in range(self.__parties):
+            if i % 2 == 0:
+                gagnant = self.__jouer(config_a, config_b)
+                if gagnant == 1:
+                    a_premier += 1
+                elif gagnant == 2:
+                    b_second += 1
+                else:
+                    nuls += 1
             else:
-                resultats[2] += 1
+                gagnant = self.__jouer(config_b, config_a)
+                if gagnant == 1:
+                    b_premier += 1
+                elif gagnant == 2:
+                    a_second += 1
+                else:
+                    nuls += 1
 
-        duree = time.perf_counter() - debut
-        self.__enregistrer(config_j1, config_j2, resultats, duree)
-        return resultats
+        resultat = {"nom_a": self.__nom(config_a), "nom_b": self.__nom(config_b),
+                    "a_premier": a_premier, "a_second": a_second,
+                    "b_premier": b_premier, "b_second": b_second, "nuls": nuls}
+        self.__resultats.append(resultat)
+        return resultat
 
-    def affronter_alterne(self, config_a: tuple, config_b: tuple) -> list[int]:
-        
-        moitie = self.__nb_parties // 2
-        debut = time.perf_counter()
-        resultats = [0, 0, 0]
+    def tournoi(self, configs):
+        # chaque joueur affronte tous les autres
+        for i in range(len(configs)):
+            for j in range(i + 1, len(configs)):
+                self.duel(configs[i], configs[j])
 
-        # Première moitié : A est le joueur 1.
-        for _ in range(moitie):
-            gagnant = self.__jouer_une_partie(config_a, config_b)
-            if gagnant == 1:
-                resultats[0] += 1
-            elif gagnant == 2:
-                resultats[1] += 1
-            else:
-                resultats[2] += 1
-
-        # Seconde moitié : B est le joueur 1, on inverse donc les compteurs.
-        for _ in range(self.__nb_parties - moitie):
-            gagnant = self.__jouer_une_partie(config_b, config_a)
-            if gagnant == 1:
-                resultats[1] += 1
-            elif gagnant == 2:
-                resultats[0] += 1
-            else:
-                resultats[2] += 1
-
-        duree = time.perf_counter() - debut
-        self.__enregistrer(config_a, config_b, resultats, duree)
-        return resultats
-
-    def tableau_resultats(self) -> None:
-        
-        for affiche in self.__historique:
-            total = affiche["victoires_j1"] + affiche["victoires_j2"] + affiche["nuls"]
-            if total == 0:
-                continue
-
-            pourcent_j1 = 100 * affiche["victoires_j1"] / total
-            pourcent_j2 = 100 * affiche["victoires_j2"] / total
-            pourcent_nuls = 100 * affiche["nuls"] / total
-
-            print(f"{affiche['nom_j1']} contre {affiche['nom_j2']}")
-            print(f"  parties jouées : {total}")
-            print(f"  victoires {affiche['nom_j1']} : {pourcent_j1:.1f} %")
-            print(f"  victoires {affiche['nom_j2']} : {pourcent_j2:.1f} %")
-            print(f"  nuls : {pourcent_nuls:.1f} %")
-            print(f"  temps moyen par partie : {affiche['temps_moyen']:.4f} s")
+    def afficher(self):
+        for r in self.__resultats:
+            victoires_a = r["a_premier"] + r["a_second"]
+            victoires_b = r["b_premier"] + r["b_second"]
             print()
+            print(r["nom_a"], "contre", r["nom_b"], "-", self.__parties, "parties")
+            print("  victoires", r["nom_a"], ":", victoires_a,
+                  "(dont", r["a_premier"], "en commençant)")
+            print("  victoires", r["nom_b"], ":", victoires_b,
+                  "(dont", r["b_premier"], "en commençant)")
+            print("  nuls :", r["nuls"])
 
-    def __jouer_une_partie(self, config_j1: tuple, config_j2: tuple) -> int:
-        # Joue une partie complète sur un plateau neuf et renvoie le gagnant.
-        m, n = self.__taille
-        jeu = ManicMinelayers(m, n)
-        joueur1 = self.__creer_joueur(config_j1, jeu, 1)
-        joueur2 = self.__creer_joueur(config_j2, jeu, 2)
-        partie = Partie(jeu, joueur1, joueur2)
-        return partie.lancer()
+    def __jouer(self, config_1, config_2):
+        jeu = ManicMinelayers(self.__lignes, self.__colonnes)
+        joueur1 = creer_joueur(config_1[0], jeu, 1, None, **config_1[1])
+        joueur2 = creer_joueur(config_2[0], jeu, 2, None, **config_2[1])
+        return Partie(jeu, joueur1, joueur2).lancer()
 
-    def __creer_joueur(self, config: tuple, jeu: ManicMinelayers, numero: int):
-        # Crée un joueur à partir de sa configuration (classe, paramètres).
-        classe, parametres = config
-        return classe(jeu, numero, **parametres)
-
-    def __enregistrer(self, config_j1: tuple, config_j2: tuple, resultats: list[int],
-                      duree: float) -> None:
-        # Ajoute un affrontement à l'historique pour le tableau final.
-        self.__historique.append({
-            "nom_j1": self.__nom_du_joueur(config_j1, 1),
-            "nom_j2": self.__nom_du_joueur(config_j2, 2),
-            "victoires_j1": resultats[0],
-            "victoires_j2": resultats[1],
-            "nuls": resultats[2],
-            "temps_moyen": duree / self.__nb_parties,
-        })
-
-    def __nom_du_joueur(self, config: tuple, numero: int) -> str:
-        # Crée un joueur sur un plateau neuf juste pour lire son nom.
-        classe, parametres = config
-        jeu = ManicMinelayers(*self.__taille)
-        return classe(jeu, numero, **parametres).get_nom()
+    def __nom(self, config):
+        jeu = ManicMinelayers(self.__lignes, self.__colonnes)
+        return creer_joueur(config[0], jeu, 1, None, **config[1]).nom()

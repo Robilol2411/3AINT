@@ -1,20 +1,15 @@
 import random
 
-from manic_minelayers import ManicMinelayers
-
 
 class StupidBot:
- 
-    def __init__(self, jeu: ManicMinelayers, numero: int) -> None:
-        
+    # Joue un coup licite tiré au hasard.
+
+    def __init__(self, jeu, numero):
         self.__jeu = jeu
         self.__numero = numero
 
-    def choisir_coup(self) -> tuple[int, int]:
-        
-        coups = self.__jeu.coups_possibles(self.__numero)
-        return random.choice(coups)
-
-    def get_nom(self) -> str:
-      
+    def nom(self):
         return "StupidBot"
+
+    def proposer_coup(self):
+        return random.choice(self.__jeu.mouvements(self.__numero))
